@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Token Sale</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
+    <style>
+      body {
+        font-family: 'Arial', sans-serif;
+        margin: 0;
+        padding: 0;
+        background: linear-gradient(135deg, #1a1a40, #3a3a90);
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        margin-bottom: 20px;
+        text-shadow: 0 0 10px #00d4ff;
+      }
+
+      h2 {
+        margin-top: 20px;
+        font-size: 1.8rem;
+        text-shadow: 0 0 5px #ff00ff;
+      }
+
+      button {
+        background: linear-gradient(135deg, #00d4ff, #0055ff);
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        font-size: 1.1rem;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin: 10px 0;
+        box-shadow: 0 0 10px #00d4ff;
+      }
+
+      button:hover {
+        transform: scale(1.05);
+        background: linear-gradient(135deg, #ff00ff, #0055ff);
+      }
+
+      input {
+        background: #2a2a5a;
+        border: 1px solid #0055ff;
+        padding: 10px;
+        color: #fff;
+        border-radius: 5px;
+        margin: 10px 0;
+        width: 100%;
+        max-width: 300px;
+        box-shadow: inset 0 0 5px #0055ff;
+      }
+
+      p {
+        font-size: 1rem;
+        text-align: center;
+      }
+
+      #walletAddress {
+        font-weight: bold;
+        text-shadow: 0 0 5px #00d4ff;
+        margin: 10px 0;
+      }
+
+      #transactionStatus {
+        font-size: 1rem;
+        margin-top: 15px;
+        color: #ffd700;
+        text-shadow: 0 0 5px #ffd700;
+      }
+
+      .container {
+        text-align: center;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+        width: 90%;
+        max-width: 500px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Token Sale</h1>
+      <button id="connectButton">Connect Wallet</button>
+      <p id="walletAddress">Wallet not connected</p>
+
+      <h2>Buy Tokens</h2>
+      <label for="buyAmount">Amount to Buy (ETH):</label><br />
+      <input
+        type="number"
+        id="buyAmount"
+        placeholder="0.1"
+        min="0.01"
+        step="0.01"
+      />
+      <br />
+      <button id="buyButton">Buy Tokens</button>
+      <p id="transactionStatus"></p>
+    </div>
+
+    <script>
+      const connectButton = document.getElementById("connectButton");
+      const buyButton = document.getElementById("buyButton");
+      const walletAddress = document.getElementById("walletAddress");
+      const transactionStatus = document.getElementById("transactionStatus");
+      const buyAmountInput = document.getElementById("buyAmount");
+
+      let provider;
+      let signer;
+
+      const tokenContractAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+      const tokenContractABI = [
+        {
+          inputs: [],
+          name: "buyTokens",
+          outputs: [],
+          stateMutability: "payable",
+          type: "function",
+        },
+      ];
+
+      // Connect Wallet
+      connectButton.addEventListener("click", async () => {
+        if (typeof window.ethereum !== "undefined") {
+          try {
+            console.log("Connecting to Wallet...");
+            await window.ethereum.request({ method: "eth_requestAccounts" });
+            provider = new ethers.BrowserProvider(window.ethereum);
+            signer = await provider.getSigner();
+            const address = await signer.getAddress();
+            walletAddress.textContent = `Connected Address: ${address}`;
+          } catch (error) {
+            console.error("An error occurred while connecting to MetaMask:", error);
+            walletAddress.textContent = "Failed to connect to MetaMask.";
+          }
+        } else {
+          walletAddress.textContent =
+            "Wallet is not installed. Please install it to use this feature.";
+        }
+      });
+
+      // Buy Tokens
+      buyButton.addEventListener("click", async () => {
+        if (!signer) {
+          alert("Please connect your wallet first.");
+          return;
+        }
+
+        const ethAmount = buyAmountInput.value;
+        if (!ethAmount || ethAmount <= 0) {
+          alert("Please enter a valid ETH amount.");
+          return;
+        }
+
+        try {
+          const tokenContract = new ethers.Contract(
+            tokenContractAddress,
+            tokenContractABI,
+            signer
+          );
+
+          const tx = await tokenContract.buyTokens({
+            value: ethers.parseEther(ethAmount),
+          });
+
+          transactionStatus.textContent = "Transaction pending...";
+          await tx.wait();
+          transactionStatus.textContent = `Transaction successful: ${tx.hash}`;
+          console.log("Transaction Hash:", tx.hash);
+        } catch (error) {
+          console.error("Error purchasing tokens:", error);
+          transactionStatus.textContent =
+            "Transaction failed. Check the console for details.";
+        }
+      });
+    </script>
+  </body>
+</html>
